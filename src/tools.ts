@@ -16,6 +16,7 @@ import {
 } from "./types.js";
 import {
   createProject,
+  findProjectRoot,
   findFiles,
   matchesScope,
   validatePath,
@@ -31,6 +32,7 @@ import {
   getNodeComplexity,
   getTypeString
 } from "./utils.js";
+import { cacheManager, memoize, CacheManager } from "./cache.js";
 import {
   analyzeSourceFile,
   extractSymbolInfo,
@@ -159,11 +161,37 @@ export const summarizeCodebaseSchema = z.object({
 
 // Tool implementations
 export async function analyzeFile(params: z.infer<typeof analyzeFileSchema>) {
+  const startTime = Date.now();
   validatePath(params.filePath);
-  checkMemoryUsage();
+  await checkMemoryUsage();
   
-  const project = createProject();
-  const sourceFile = project.addSourceFileAtPath(params.filePath);
+  // Generate cache key
+  const cacheKey = cacheManager.generateCacheKey(
+    "analyzeFile",
+    params.filePath,
+    params.analysisType,
+    params.depth,
+    params.includePrivate,
+    params.outputFormat
+  );
+  
+  // Check cache
+  const cached = await cacheManager.getCachedAnalysis(cacheKey);
+  if (cached) {
+    return cached;
+  }
+  
+  // Extract project root from file path to use proper tsconfig.json
+  const projectRoot = findProjectRoot(params.filePath);
+  const project = createProject(projectRoot);
+  
+  // Try to get cached source file
+  const cachedFile = await cacheManager.getCachedFile(params.filePath);
+  const sourceFile = cachedFile?.sourceFile || project.addSourceFileAtPath(params.filePath);
+  
+  if (!cachedFile) {
+    await cacheManager.setCachedFile(params.filePath, sourceFile);
+  }
   
   const result = await withTimeout(
     Promise.resolve(analyzeSourceFile(
@@ -178,6 +206,7 @@ export async function analyzeFile(params: z.infer<typeof analyzeFileSchema>) {
   
   const filePath = sourceFile.getFilePath();
   const fileSize = sourceFile.getFullText().length;
+  const stats = await cacheManager.getFileStats(filePath);
   
   const summary = {
     totalSymbols: result.symbols.length,
@@ -185,31 +214,55 @@ export async function analyzeFile(params: z.infer<typeof analyzeFileSchema>) {
     dependencies: result.imports.map(imp => imp.moduleSpecifier)
   };
   
+  let response;
   if (params.outputFormat === "summary") {
-    return {
+    response = {
       summary,
       metadata: {
         fileSize,
-        lastModified: new Date().toISOString(),
-        analysisTimeMs: 0
+        lastModified: new Date(stats.lastModified).toISOString(),
+        analysisTimeMs: Date.now() - startTime
+      }
+    };
+  } else {
+    response = {
+      summary,
+      symbols: params.outputFormat === "full" ? result.symbols : result.symbols.slice(0, 10),
+      diagnostics: result.diagnostics,
+      metadata: {
+        fileSize,
+        lastModified: new Date(stats.lastModified).toISOString(),
+        analysisTimeMs: Date.now() - startTime
       }
     };
   }
   
-  return {
-    summary,
-    symbols: params.outputFormat === "full" ? result.symbols : result.symbols.slice(0, 10),
-    diagnostics: result.diagnostics,
-    metadata: {
-      fileSize,
-      lastModified: new Date().toISOString(),
-      analysisTimeMs: 0
-    }
-  };
+  // Cache the result
+  await cacheManager.setCachedAnalysis(cacheKey, response);
+  
+  return response;
 }
 
 export async function searchSymbols(params: z.infer<typeof searchSymbolsSchema>) {
   const startTime = Date.now();
+  await checkMemoryUsage();
+  
+  // Generate cache key for the search
+  const cacheKey = cacheManager.generateCacheKey(
+    "searchSymbols",
+    params.query,
+    params.searchType,
+    params.scope,
+    params.symbolTypes,
+    params.maxResults
+  );
+  
+  // Check cache
+  const cached = await cacheManager.getCachedAnalysis(cacheKey);
+  if (cached && !params.includeReferences) {
+    return cached;
+  }
+  
   const project = createProject();
   const matches: Array<{
     symbol: SymbolInfo;
@@ -221,11 +274,21 @@ export async function searchSymbols(params: z.infer<typeof searchSymbolsSchema>)
   const files = await findFiles("**/*.{ts,tsx}", process.cwd());
   const filteredFiles = files.filter(file => matchesScope(file, params.scope));
   
+  // Determine cache strategy based on project size
+  const cacheStrategy = CacheManager.getCacheStrategy(files.length);
+  
   await Promise.all(
     filteredFiles.map(file => 
       limit(async () => {
         try {
-          const sourceFile = project.addSourceFileAtPath(file);
+          // Try to get cached source file
+          const cachedFile = await cacheManager.getCachedFile(file);
+          const sourceFile = cachedFile?.sourceFile || project.addSourceFileAtPath(file);
+          
+          if (!cachedFile) {
+            await cacheManager.setCachedFile(file, sourceFile);
+          }
+          
           const analysis = analyzeSourceFile(sourceFile, "symbols", 1, false);
           
           for (const symbol of analysis.symbols) {
@@ -257,18 +320,50 @@ export async function searchSymbols(params: z.infer<typeof searchSymbolsSchema>)
   matches.sort((a, b) => b.score - a.score);
   const topMatches = matches.slice(0, params.maxResults);
   
-  return {
+  const result = {
     matches: topMatches,
     totalMatches: matches.length,
     searchTimeMs: Date.now() - startTime
   };
+  
+  // Cache the result if references are not included
+  if (!params.includeReferences) {
+    await cacheManager.setCachedAnalysis(cacheKey, result);
+  }
+  
+  return result;
 }
 
 export async function getSymbolInfo(params: z.infer<typeof getSymbolInfoSchema>) {
   validatePath(params.filePath);
+  await checkMemoryUsage();
+  
+  // Generate cache key
+  const cacheKey = cacheManager.generateCacheKey(
+    "getSymbolInfo",
+    params.filePath,
+    params.position,
+    params.includeRelationships,
+    params.includeUsages,
+    params.depth
+  );
+  
+  // Check cache
+  const cached = await cacheManager.getCachedAnalysis(cacheKey);
+  if (cached) {
+    return cached;
+  }
   
   const project = createProject();
-  const sourceFile = project.addSourceFileAtPath(params.filePath);
+  
+  // Try to get cached source file
+  const cachedFile = await cacheManager.getCachedFile(params.filePath);
+  const sourceFile = cachedFile?.sourceFile || project.addSourceFileAtPath(params.filePath);
+  
+  if (!cachedFile) {
+    await cacheManager.setCachedFile(params.filePath, sourceFile);
+  }
+  
   const node = findSymbolAtPosition(sourceFile, params.position);
   
   if (!node) {
@@ -307,6 +402,9 @@ export async function getSymbolInfo(params: z.infer<typeof getSymbolInfoSchema>)
       };
     }
   }
+  
+  // Cache the result
+  await cacheManager.setCachedAnalysis(cacheKey, symbolInfo);
   
   return symbolInfo;
 }

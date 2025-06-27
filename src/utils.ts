@@ -2,7 +2,7 @@ import { Project, SourceFile, Node, SyntaxKind, Symbol, Type } from "ts-morph";
 import { glob } from "glob";
 import { minimatch } from "minimatch";
 import path from "path";
-import { LRUCache } from "lru-cache";
+import * as fs from "fs";
 import { 
   Position, 
   Location, 
@@ -11,9 +11,25 @@ import {
   ErrorCode,
   AnalysisError
 } from "./types.js";
+import { cacheManager } from "./cache.js";
 
-export const fileCache = new LRUCache<string, SourceFile>({ max: 1000 });
-export const symbolCache = new LRUCache<string, Symbol>({ max: 10000 });
+// Re-export for backward compatibility
+export const fileCache = {
+  get: (key: string) => {
+    const cached = cacheManager.getCachedFile(key);
+    return cached?.then(c => c?.sourceFile);
+  },
+  set: (key: string, value: SourceFile) => {
+    cacheManager.setCachedFile(key, value);
+  },
+  clear: () => cacheManager.clearFileCache()
+};
+
+export const symbolCache = {
+  get: (key: string) => cacheManager.getCachedSymbol(key),
+  set: (key: string, value: any) => cacheManager.setCachedSymbol(key, value),
+  clear: () => cacheManager.clearSymbolCache()
+};
 
 export const performanceConfig: PerformanceConfig = {
   maxMemoryMB: 2048,
@@ -36,10 +52,37 @@ export const securityConfig = {
   maxPathDepth: 10,
 };
 
+export function findProjectRoot(filePath: string): string {
+  let currentDir = path.dirname(path.resolve(filePath));
+  
+  // Look for tsconfig.json, package.json, or .git to determine project root
+  while (currentDir !== path.dirname(currentDir)) {
+    if (fs.existsSync(path.join(currentDir, 'tsconfig.json')) || 
+        fs.existsSync(path.join(currentDir, 'package.json')) ||
+        fs.existsSync(path.join(currentDir, '.git'))) {
+      return currentDir;
+    }
+    currentDir = path.dirname(currentDir);
+  }
+  
+  // Fallback to the directory containing the file
+  return path.dirname(path.resolve(filePath));
+}
+
 export function createProject(rootPath?: string): Project {
+  const workingDir = rootPath || process.cwd();
+  const tsConfigPath = path.join(workingDir, "tsconfig.json");
+  
   const project = new Project({
-    tsConfigFilePath: rootPath ? path.join(rootPath, "tsconfig.json") : undefined,
-    skipAddingFilesFromTsConfig: true,
+    tsConfigFilePath: tsConfigPath,
+    skipAddingFilesFromTsConfig: false, // Allow tsconfig.json to control file inclusion
+    compilerOptions: {
+      // Only add our custom options, let tsconfig.json handle the rest
+      incremental: true,
+      tsBuildInfoFile: path.join(cacheManager.getCacheDir() || ".mcp-cache", "tsconfig.tsbuildinfo")
+    },
+    // Add error handling for missing tsconfig.json
+    useInMemoryFileSystem: false
   });
   
   return project;
@@ -203,16 +246,16 @@ export function getTypeString(type: Type): string {
   return typeText;
 }
 
-export function checkMemoryUsage(): void {
+export async function checkMemoryUsage(): Promise<void> {
   const usage = process.memoryUsage();
   const heapUsedMB = usage.heapUsed / 1024 / 1024;
+  const cacheMemoryMB = cacheManager.getMemoryUsage() / 1024 / 1024;
   
-  if (heapUsedMB > performanceConfig.maxMemoryMB * 0.9) {
+  if (heapUsedMB + cacheMemoryMB > performanceConfig.maxMemoryMB * 0.9) {
     if (global.gc) {
       global.gc();
     }
-    fileCache.clear();
-    symbolCache.clear();
+    await cacheManager.clearAll();
   }
 }
 
