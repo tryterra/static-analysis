@@ -15,23 +15,38 @@ A Model Context Protocol (MCP) server for comprehensive TypeScript code analysis
 
 ## Installation
 
+### From Source
+
 1. **Build the server**:
 
    ```bash
-   npm run build
+   pnpm install
+   pnpm run build
    ```
 
 2. **Install to MCP clients**:
 
    ```bash
    # Install to all supported clients
-   npm run install-server
+   pnpm run install-server
 
    # Install to specific clients
-   npm run install-cursor    # Cursor IDE
-   npm run install-desktop   # Claude Desktop
-   npm run install-code      # Claude Code CLI
+   pnpm run install-cursor    # Cursor IDE
+   pnpm run install-desktop   # Claude Desktop
+   pnpm run install-code      # Claude Code CLI
    ```
+
+### From Release
+
+Download the latest release from GitHub releases and extract to your desired location:
+
+```bash
+# Download and extract
+curl -L https://github.com/tryterra/static-analysis/releases/latest/download/mcp-typescript-analyzer-vX.X.X.tar.gz | tar -xz
+
+# Make executable
+chmod +x dist/index.js
+```
 
 ## Available Tools
 
@@ -255,6 +270,24 @@ See `TEST_RESULTS.md` for detailed test results and examples of all tool outputs
 ## License
 
 MIT License - see LICENSE file for details.
+
+## CI/CD and Distribution
+
+This project includes automated GitHub Actions workflows for:
+
+- **Continuous Integration**: Builds and tests across multiple operating systems (Ubuntu, Windows, macOS) and Node.js versions (18, 20)
+- **Automated Releases**: Creates distribution packages (tar.gz and zip) when version tags are pushed
+- **Cross-platform Support**: Ensures compatibility across different environments
+
+To create a new release:
+
+```bash
+# Tag a new version
+git tag v1.0.1
+git push origin v1.0.1
+
+# GitHub Actions will automatically build and create the release
+```
 
 ## Requirements
 
