@@ -16,15 +16,17 @@ A Model Context Protocol (MCP) server for comprehensive TypeScript code analysis
 ## Installation
 
 1. **Build the server**:
+
    ```bash
    npm run build
    ```
 
 2. **Install to MCP clients**:
+
    ```bash
    # Install to all supported clients
    npm run install-server
-   
+
    # Install to specific clients
    npm run install-cursor    # Cursor IDE
    npm run install-desktop   # Claude Desktop
@@ -34,9 +36,11 @@ A Model Context Protocol (MCP) server for comprehensive TypeScript code analysis
 ## Available Tools
 
 ### 1. `analyze_file`
+
 Analyzes a single TypeScript file with configurable depth and detail.
 
 **Parameters:**
+
 - `filePath` (string): Path to the TypeScript file
 - `analysisType` (enum): Type of analysis - "symbols", "dependencies", "complexity", "all"
 - `depth` (number): Analysis depth (1-3, default: 2)
@@ -44,9 +48,11 @@ Analyzes a single TypeScript file with configurable depth and detail.
 - `outputFormat` (enum): Output format - "summary", "detailed", "full" (default: "summary")
 
 ### 2. `search_symbols`
+
 Search for symbols across the codebase using various strategies.
 
 **Parameters:**
+
 - `query` (string): Search query
 - `searchType` (enum): Search type - "text", "semantic", "ast-pattern"
 - `symbolTypes` (array): Filter by symbol types (class, interface, function, etc.)
@@ -54,9 +60,11 @@ Search for symbols across the codebase using various strategies.
 - `includeReferences` (boolean): Include reference information (default: false)
 
 ### 3. `get_symbol_info`
+
 Get detailed information about a specific symbol at a given position.
 
 **Parameters:**
+
 - `filePath` (string): Path to the file
 - `position` (object): Line and character position
 - `includeRelationships` (boolean): Include type relationships (default: true)
@@ -64,9 +72,11 @@ Get detailed information about a specific symbol at a given position.
 - `depth` (number): Analysis depth (default: 2)
 
 ### 4. `find_references`
+
 Find all references to a symbol across the project.
 
 **Parameters:**
+
 - `filePath` (string): Path to the file containing the symbol
 - `position` (object): Position of the symbol
 - `includeDeclaration` (boolean): Include the declaration (default: false)
@@ -74,9 +84,11 @@ Find all references to a symbol across the project.
 - `maxResults` (number): Maximum results (default: 100)
 
 ### 5. `analyze_dependencies`
+
 Analyze import/export dependencies and generate dependency graphs.
 
 **Parameters:**
+
 - `filePath` (string, optional): Specific file to analyze
 - `direction` (enum): Analysis direction - "imports", "exports", "both"
 - `depth` (number): Analysis depth (default: 2)
@@ -84,26 +96,32 @@ Analyze import/export dependencies and generate dependency graphs.
 - `groupBy` (enum): Grouping strategy - "module", "file", "none" (default: "module")
 
 ### 6. `find_patterns`
+
 Search for code patterns using AST matching, semantic analysis, or regex.
 
 **Parameters:**
+
 - `pattern` (string): Pattern to search for
 - `patternType` (enum): Pattern type - "ast", "semantic", "regex"
 - `maxResults` (number): Maximum results (default: 100)
 - `includeContext` (boolean): Include surrounding context (default: true)
 
 ### 7. `detect_code_smells`
+
 Identify common code quality issues and anti-patterns.
 
 **Parameters:**
+
 - `filePath` (string, optional): Specific file to analyze
 - `categories` (array): Categories to check - complexity, duplication, coupling, naming, unused-code, async-issues
 - `threshold` (object): Configurable thresholds for various metrics
 
 ### 8. `extract_context`
+
 Extract relevant context for AI understanding and code completion.
 
 **Parameters:**
+
 - `filePath` (string): Path to the file
 - `position` (object, optional): Position to focus on
 - `contextType` (enum): Context type - "function", "class", "module", "related"
@@ -112,9 +130,11 @@ Extract relevant context for AI understanding and code completion.
 - `includeTypes` (boolean): Include type information (default: true)
 
 ### 9. `summarize_codebase`
+
 Generate a high-level summary of the entire codebase.
 
 **Parameters:**
+
 - `rootPath` (string, optional): Root directory to analyze
 - `includeMetrics` (boolean): Include complexity metrics (default: true)
 - `includeArchitecture` (boolean): Include architectural analysis (default: true)
@@ -123,17 +143,21 @@ Generate a high-level summary of the entire codebase.
 ## Advanced Features
 
 ### Caching System
+
 The server includes an intelligent caching system that:
+
 - Caches parsed TypeScript files and analysis results
 - Adapts caching strategy based on project size
 - Provides significant performance improvements for repeated operations
 
 ### Performance Optimization
+
 - Parallel processing for multi-file operations
 - Configurable timeouts and memory monitoring
 - Adaptive algorithms based on codebase size
 
 ### Error Handling
+
 - Comprehensive error reporting with detailed context
 - Graceful degradation for partially corrupt files
 - Structured error codes for programmatic handling
@@ -141,6 +165,7 @@ The server includes an intelligent caching system that:
 ## Configuration
 
 ### Environment Variables
+
 Create a `.env.local` file to configure the server:
 
 ```env
@@ -154,11 +179,13 @@ CACHE_TTL=3600000
 ```
 
 ### TypeScript Configuration
+
 The server automatically detects and uses your project's `tsconfig.json` file for accurate type analysis.
 
 ## Usage Examples
 
 ### Basic File Analysis
+
 ```json
 {
   "tool": "analyze_file",
@@ -171,6 +198,7 @@ The server automatically detects and uses your project's `tsconfig.json` file fo
 ```
 
 ### Symbol Search
+
 ```json
 {
   "tool": "search_symbols",
@@ -183,6 +211,7 @@ The server automatically detects and uses your project's `tsconfig.json` file fo
 ```
 
 ### Pattern Detection
+
 ```json
 {
   "tool": "find_patterns",
@@ -194,6 +223,7 @@ The server automatically detects and uses your project's `tsconfig.json` file fo
 ```
 
 ### Code Quality Analysis
+
 ```json
 {
   "tool": "detect_code_smells",
@@ -220,19 +250,11 @@ The server is built with a modular architecture:
 
 ## Testing
 
-The server includes comprehensive test coverage. See `TEST_RESULTS.md` for detailed test results and examples of all tool outputs.
+See `TEST_RESULTS.md` for detailed test results and examples of all tool outputs.
 
 ## License
 
 MIT License - see LICENSE file for details.
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Ensure all tests pass
-5. Submit a pull request
 
 ## Requirements
 
