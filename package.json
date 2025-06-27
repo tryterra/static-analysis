@@ -1,0 +1,36 @@
+{
+  "name": "mcp-typescript-analyzer",
+  "version": "1.0.0",
+  "description": "MCP server for TypeScript code analysis using ts-morph",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "mcp-typescript-analyzer": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc && chmod 755 dist/index.js",
+    "start": "node dist/index.js",
+    "install-server": "tsc && chmod 755 dist/index.js && node scripts/update-config.js",
+    "install-cursor": "tsc && chmod 755 dist/index.js && node scripts/update-config.js cursor",
+    "install-desktop": "tsc && chmod 755 dist/index.js && node scripts/update-config.js desktop",
+    "install-code": "tsc && chmod 755 dist/index.js && node scripts/update-config.js code"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.2.0",
+    "ts-morph": "^23.0.0",
+    "glob": "^10.3.10",
+    "minimatch": "^9.0.3",
+    "p-limit": "^5.0.0",
+    "lru-cache": "^10.1.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/glob": "^8.1.0",
+    "@types/minimatch": "^5.1.2",
+    "typescript": "^5.3.2"
+  },
+  "files": [
+    "dist"
+  ]
+}
