@@ -1,508 +1,241 @@
 # MCP TypeScript Analyzer
 
-A powerful Model Context Protocol (MCP) server for comprehensive TypeScript code analysis using ts-morph. This tool provides deep static analysis capabilities for TypeScript codebases with intelligent caching and performance optimizations.
+A Model Context Protocol (MCP) server for comprehensive TypeScript code analysis using ts-morph. This server provides advanced static analysis capabilities for TypeScript codebases, including symbol extraction, dependency analysis, code quality detection, and pattern matching.
 
 ## Features
 
-### Core Analysis Capabilities
-- **File Analysis**: Deep inspection of TypeScript files with symbol extraction, complexity metrics, and type information
-- **Symbol Search**: Advanced search across codebases with fuzzy matching and filtering
-- **Reference Finding**: Locate all references to symbols with precise location tracking
-- **Dependency Analysis**: Map import/export relationships and dependency graphs
-- **Pattern Matching**: AST-based code pattern detection and matching
-- **Code Smell Detection**: Identify common code quality issues and anti-patterns
-- **Context Extraction**: Extract relevant code context for AI understanding
-- **Codebase Summarization**: Generate high-level summaries of entire codebases
-
-### Performance & Caching
-- **Multi-layer Caching**: LRU memory cache + persistent disk cache
-- **Intelligent Cache Invalidation**: Content-hash, timestamp, or manual strategies
-- **Project-aware Configuration**: Automatically detects and uses target project's `tsconfig.json`
-- **Memory Management**: Configurable limits and automatic garbage collection
-- **Batch Processing**: Concurrent analysis with configurable limits
-
-### MCP Integration
-- **Standard MCP Protocol**: Full compatibility with MCP-enabled clients
-- **Tool-based Interface**: Each analysis function exposed as an MCP tool
-- **Error Handling**: Comprehensive error reporting with detailed diagnostics
-- **Type Safety**: Full TypeScript support with Zod schema validation
+- **File Analysis**: Comprehensive analysis of TypeScript files with configurable depth and detail
+- **Symbol Search**: Semantic symbol search across codebases with scoring and filtering
+- **Pattern Matching**: AST-based, semantic, and regex pattern detection
+- **Code Quality**: Automated detection of code smells and complexity issues
+- **Reference Tracking**: Find all references to symbols with context
+- **Dependency Analysis**: Import/export dependency graph generation
+- **Context Extraction**: AI-friendly context extraction for code understanding
+- **Codebase Summarization**: High-level architectural analysis and metrics
 
 ## Installation
 
-### Prerequisites
-- Node.js 18+ 
-- TypeScript 5.3+
-- An MCP-compatible client (Claude Desktop, Cursor, VS Code, etc.)
+1. **Build the server**:
+   ```bash
+   npm run build
+   ```
 
-### Install from npm (Coming Soon)
-```bash
-npm install -g mcp-typescript-analyzer
-```
-
-### Install from Source
-```bash
-git clone https://github.com/your-org/mcp-typescript-analyzer.git
-cd mcp-typescript-analyzer
-npm install
-npm run build
-```
-
-### Install for MCP Clients
-```bash
-# For Claude Desktop
-npm run install-desktop
-
-# For Cursor
-npm run install-cursor
-
-# For VS Code
-npm run install-code
-
-# Generic MCP server
-npm run install-server
-```
-
-## Configuration
-
-### MCP Client Configuration
-
-Add this to your MCP client configuration:
-
-**Claude Desktop (`~/Library/Application Support/Claude/claude_desktop_config.json`):**
-```json
-{
-  "mcpServers": {
-    "typescript-analyzer": {
-      "command": "/path/to/mcp-typescript-analyzer/dist/index.js",
-      "args": []
-    }
-  }
-}
-```
-
-**Cursor (`~/.cursor/mcp_config.json`):**
-```json
-{
-  "typescript-analyzer": {
-    "command": "/path/to/mcp-typescript-analyzer/dist/index.js"
-  }
-}
-```
-
-### Cache Configuration
-
-The analyzer automatically creates a `.mcp-cache` directory in your project root. You can customize caching behavior:
-
-```typescript
-// Cache strategies based on project size
-// Small projects (< 100 files): memory-only
-// Medium projects (< 1000 files): memory-only  
-// Large projects (< 5000 files): hybrid (memory + disk)
-// Huge projects (5000+ files): disk-based
-```
-
-Add `.mcp-cache/` to your `.gitignore` file.
+2. **Install to MCP clients**:
+   ```bash
+   # Install to all supported clients
+   npm run install-server
+   
+   # Install to specific clients
+   npm run install-cursor    # Cursor IDE
+   npm run install-desktop   # Claude Desktop
+   npm run install-code      # Claude Code CLI
+   ```
 
 ## Available Tools
 
 ### 1. `analyze_file`
-Comprehensive analysis of a single TypeScript file.
-
-```json
-{
-  "name": "analyze_file",
-  "arguments": {
-    "filePath": "./src/components/Button.tsx",
-    "includeSymbols": true,
-    "includeReferences": true,
-    "includeTypes": true,
-    "depth": "medium"
-  }
-}
-```
+Analyzes a single TypeScript file with configurable depth and detail.
 
 **Parameters:**
 - `filePath` (string): Path to the TypeScript file
-- `includeSymbols` (boolean): Extract symbol information
-- `includeReferences` (boolean): Include reference locations
-- `includeTypes` (boolean): Include type information
-- `depth` ("shallow" | "medium" | "deep"): Analysis depth
+- `analysisType` (enum): Type of analysis - "symbols", "dependencies", "complexity", "all"
+- `depth` (number): Analysis depth (1-3, default: 2)
+- `includePrivate` (boolean): Include private members (default: false)
+- `outputFormat` (enum): Output format - "summary", "detailed", "full" (default: "summary")
 
 ### 2. `search_symbols`
-Search for symbols across the codebase.
+Search for symbols across the codebase using various strategies.
 
-```json
-{
-  "name": "search_symbols",
-  "arguments": {
-    "query": "UserComponent",
-    "searchStrategy": "fuzzy",
-    "symbolTypes": ["class", "function", "interface"],
-    "maxResults": 50
-  }
-}
-```
+**Parameters:**
+- `query` (string): Search query
+- `searchType` (enum): Search type - "text", "semantic", "ast-pattern"
+- `symbolTypes` (array): Filter by symbol types (class, interface, function, etc.)
+- `maxResults` (number): Maximum results to return (default: 50)
+- `includeReferences` (boolean): Include reference information (default: false)
 
 ### 3. `get_symbol_info`
-Get detailed information about a specific symbol.
+Get detailed information about a specific symbol at a given position.
 
-```json
-{
-  "name": "get_symbol_info",
-  "arguments": {
-    "symbolName": "UserService",
-    "filePath": "./src/services/UserService.ts"
-  }
-}
-```
+**Parameters:**
+- `filePath` (string): Path to the file
+- `position` (object): Line and character position
+- `includeRelationships` (boolean): Include type relationships (default: true)
+- `includeUsages` (boolean): Include usage information (default: false)
+- `depth` (number): Analysis depth (default: 2)
 
 ### 4. `find_references`
-Find all references to a symbol.
+Find all references to a symbol across the project.
 
-```json
-{
-  "name": "find_references",
-  "arguments": {
-    "symbolName": "calculateTotal",
-    "filePath": "./src/utils/math.ts",
-    "includeDeclaration": true
-  }
-}
-```
+**Parameters:**
+- `filePath` (string): Path to the file containing the symbol
+- `position` (object): Position of the symbol
+- `includeDeclaration` (boolean): Include the declaration (default: false)
+- `scope` (enum): Search scope - "file" or "project" (default: "project")
+- `maxResults` (number): Maximum results (default: 100)
 
 ### 5. `analyze_dependencies`
-Analyze import/export relationships.
+Analyze import/export dependencies and generate dependency graphs.
 
-```json
-{
-  "name": "analyze_dependencies",
-  "arguments": {
-    "filePath": "./src/index.ts",
-    "direction": "both",
-    "includeExternal": false,
-    "maxDepth": 3
-  }
-}
-```
+**Parameters:**
+- `filePath` (string, optional): Specific file to analyze
+- `direction` (enum): Analysis direction - "imports", "exports", "both"
+- `depth` (number): Analysis depth (default: 2)
+- `includeNodeModules` (boolean): Include node_modules (default: false)
+- `groupBy` (enum): Grouping strategy - "module", "file", "none" (default: "module")
 
 ### 6. `find_patterns`
-Search for code patterns using AST matching.
+Search for code patterns using AST matching, semantic analysis, or regex.
 
-```json
-{
-  "name": "find_patterns",
-  "arguments": {
-    "pattern": "async function.*await.*fetch",
-    "includeTests": false,
-    "contextLines": 3
-  }
-}
-```
+**Parameters:**
+- `pattern` (string): Pattern to search for
+- `patternType` (enum): Pattern type - "ast", "semantic", "regex"
+- `maxResults` (number): Maximum results (default: 100)
+- `includeContext` (boolean): Include surrounding context (default: true)
 
 ### 7. `detect_code_smells`
-Identify code quality issues.
+Identify common code quality issues and anti-patterns.
 
-```json
-{
-  "name": "detect_code_smells",
-  "arguments": {
-    "filePath": "./src/legacy/old-component.ts",
-    "categories": ["complexity", "naming", "structure"],
-    "severity": "medium"
-  }
-}
-```
+**Parameters:**
+- `filePath` (string, optional): Specific file to analyze
+- `categories` (array): Categories to check - complexity, duplication, coupling, naming, unused-code, async-issues
+- `threshold` (object): Configurable thresholds for various metrics
 
 ### 8. `extract_context`
-Extract relevant context for AI understanding.
+Extract relevant context for AI understanding and code completion.
 
-```json
-{
-  "name": "extract_context",
-  "arguments": {
-    "filePath": "./src/hooks/useAuth.ts",
-    "contextType": "implementation",
-    "includeUsages": true
-  }
-}
-```
+**Parameters:**
+- `filePath` (string): Path to the file
+- `position` (object, optional): Position to focus on
+- `contextType` (enum): Context type - "function", "class", "module", "related"
+- `maxTokens` (number): Maximum tokens to return (default: 2000)
+- `includeImports` (boolean): Include import statements (default: true)
+- `includeTypes` (boolean): Include type information (default: true)
 
 ### 9. `summarize_codebase`
-Generate high-level codebase summary.
+Generate a high-level summary of the entire codebase.
 
+**Parameters:**
+- `rootPath` (string, optional): Root directory to analyze
+- `includeMetrics` (boolean): Include complexity metrics (default: true)
+- `includeArchitecture` (boolean): Include architectural analysis (default: true)
+- `maxDepth` (number): Maximum directory depth (default: 5)
+
+## Advanced Features
+
+### Caching System
+The server includes an intelligent caching system that:
+- Caches parsed TypeScript files and analysis results
+- Adapts caching strategy based on project size
+- Provides significant performance improvements for repeated operations
+
+### Performance Optimization
+- Parallel processing for multi-file operations
+- Configurable timeouts and memory monitoring
+- Adaptive algorithms based on codebase size
+
+### Error Handling
+- Comprehensive error reporting with detailed context
+- Graceful degradation for partially corrupt files
+- Structured error codes for programmatic handling
+
+## Configuration
+
+### Environment Variables
+Create a `.env.local` file to configure the server:
+
+```env
+# Optional: Set custom timeout values
+ANALYSIS_TIMEOUT=30000
+MEMORY_LIMIT=1000000000
+
+# Optional: Configure caching
+CACHE_SIZE=1000
+CACHE_TTL=3600000
+```
+
+### TypeScript Configuration
+The server automatically detects and uses your project's `tsconfig.json` file for accurate type analysis.
+
+## Usage Examples
+
+### Basic File Analysis
 ```json
 {
-  "name": "summarize_codebase",
-  "arguments": {
-    "rootPath": "./src",
-    "includeMetrics": true,
-    "groupBy": "feature"
+  "tool": "analyze_file",
+  "params": {
+    "filePath": "./src/index.ts",
+    "analysisType": "all",
+    "outputFormat": "detailed"
   }
 }
 ```
 
-## Use Cases
-
-### Code Review & Quality Assurance
-```typescript
-// Find all TODO comments
-find_patterns({ pattern: "//\\s*TODO.*", includeTests: false })
-
-// Detect complex functions
-detect_code_smells({ categories: ["complexity"], severity: "high" })
-
-// Analyze component dependencies
-analyze_dependencies({ filePath: "./src/components/App.tsx", direction: "both" })
-```
-
-### Refactoring Support
-```typescript
-// Find all usages before renaming
-find_references({ symbolName: "oldFunctionName", includeDeclaration: true })
-
-// Understand component structure
-analyze_file({ filePath: "./src/components/Form.tsx", depth: "deep" })
-
-// Check impact of changes
-analyze_dependencies({ filePath: "./src/utils/api.ts", direction: "incoming" })
-```
-
-### Documentation & Understanding
-```typescript
-// Generate component documentation
-extract_context({ filePath: "./src/components/Modal.tsx", contextType: "documentation" })
-
-// Understand codebase structure
-summarize_codebase({ rootPath: "./src", groupBy: "feature" })
-
-// Find implementation patterns
-find_patterns({ pattern: "useEffect.*\\[\\]", contextLines: 5 })
-```
-
-### AI-Assisted Development
-```typescript
-// Extract context for AI code generation
-extract_context({ 
-  filePath: "./src/hooks/useLocalStorage.ts", 
-  contextType: "implementation",
-  includeUsages: true 
-})
-
-// Understand component relationships
-analyze_dependencies({ 
-  filePath: "./src/components/Dashboard.tsx", 
-  direction: "both",
-  maxDepth: 2 
-})
-```
-
-## Example Output
-
-### File Analysis Result
+### Symbol Search
 ```json
 {
-  "summary": {
-    "totalSymbols": 15,
-    "complexity": 23,
-    "dependencies": ["react", "@/hooks/useAuth", "./types"]
-  },
-  "symbols": [
-    {
-      "name": "UserProfile",
-      "kind": "function",
-      "type": "React.FC<UserProfileProps>",
-      "location": {
-        "file": "/src/components/UserProfile.tsx",
-        "position": { "line": 12, "character": 0 },
-        "endPosition": { "line": 45, "character": 1 }
-      },
-      "modifiers": ["export", "default"],
-      "complexity": 8
-    }
-  ],
-  "diagnostics": [],
-  "metadata": {
-    "fileSize": 2048,
-    "lastModified": "2024-01-15T10:30:00Z",
-    "analysisTimeMs": 156
+  "tool": "search_symbols",
+  "params": {
+    "query": "UserService",
+    "searchType": "semantic",
+    "symbolTypes": ["class", "interface"]
   }
 }
 ```
 
-### Symbol Search Result
+### Pattern Detection
 ```json
 {
-  "symbols": [
-    {
-      "name": "useAuth",
-      "kind": "function",
-      "location": {
-        "file": "/src/hooks/useAuth.ts",
-        "position": { "line": 8, "character": 0 }
-      },
-      "relevanceScore": 0.95
-    }
-  ],
-  "totalFound": 12,
-  "searchTimeMs": 45
+  "tool": "find_patterns",
+  "params": {
+    "pattern": "console.log",
+    "patternType": "ast"
+  }
 }
 ```
 
-## Performance
-
-### Benchmarks
-- **Small Projects** (< 100 files): ~50ms per file analysis
-- **Medium Projects** (< 1000 files): ~100ms per file analysis  
-- **Large Projects** (< 5000 files): ~200ms per file analysis
-- **Cache Hit Rate**: 85-95% for repeated analyses
-- **Memory Usage**: ~50KB per cached file
-
-### Optimization Features
-- **Incremental Analysis**: Only re-analyze changed files
-- **Smart Caching**: Content-hash based invalidation
-- **Memory Management**: Automatic cleanup of unused references
-- **Concurrent Processing**: Parallel analysis with configurable limits
-- **Project-aware**: Respects `tsconfig.json` for accurate type resolution
+### Code Quality Analysis
+```json
+{
+  "tool": "detect_code_smells",
+  "params": {
+    "categories": ["complexity", "naming", "unused-code"],
+    "threshold": {
+      "complexity": 15,
+      "functionSize": 100
+    }
+  }
+}
+```
 
 ## Architecture
 
-### Core Components
-```
-src/
-├── index.ts           # MCP server entry point
-├── tools.ts           # Tool implementations
-├── analyzer.ts        # Core analysis engine
-├── cache.ts           # Multi-layer caching system
-├── utils.ts           # Utilities and helpers
-└── types.ts           # Type definitions
-```
+The server is built with a modular architecture:
 
-### Key Technologies
-- **ts-morph**: TypeScript compiler API wrapper
-- **LRU Cache**: Memory-efficient caching
-- **node-persist**: Disk-based cache persistence
-- **Zod**: Runtime type validation
-- **p-limit**: Concurrency control
+- **`src/index.ts`**: MCP server setup and tool registration
+- **`src/tools.ts`**: Tool implementations and schemas
+- **`src/analyzer.ts`**: Core TypeScript analysis engine
+- **`src/utils.ts`**: Utility functions and project management
+- **`src/cache.ts`**: Intelligent caching system
+- **`src/types.ts`**: TypeScript type definitions
 
-## Development
+## Testing
 
-### Setup
-```bash
-git clone https://github.com/your-org/mcp-typescript-analyzer.git
-cd mcp-typescript-analyzer
-npm install
-```
-
-### Build
-```bash
-npm run build          # Compile TypeScript
-npm run build:watch    # Watch mode for development
-```
-
-### Testing
-```bash
-npm test              # Run test suite
-npm run test:cache    # Test caching functionality
-npm run test:perf     # Performance benchmarks
-```
-
-### Development Workflow
-```bash
-# Start in development mode
-npm run dev
-
-# Test with a real project
-node dist/index.js
-
-# Install in MCP client for testing
-npm run install-cursor
-```
-
-## Cache Management
-
-### Cache Structure
-```
-.mcp-cache/
-├── analysis/         # Persistent analysis results
-├── files/           # Parsed file cache (memory)
-└── symbols/         # Symbol information cache (memory)
-```
-
-### Cache Commands
-```bash
-# Clear all caches
-node -e "import('./dist/cache.js').then(({cacheManager}) => cacheManager.clearAll())"
-
-# Check cache stats
-node -e "import('./dist/cache.js').then(({cacheManager}) => console.log(cacheManager.getStats()))"
-```
-
-### Cache Strategies
-- **Content-hash**: Invalidate when file content changes (default)
-- **Timestamp**: Invalidate when file modification time changes
-- **Manual**: Never invalidate automatically
-
-## Troubleshooting
-
-### Common Issues
-
-**1. "Cannot find module" errors**
-- Ensure the target project has a valid `tsconfig.json`
-- Check that path aliases are properly configured
-- Verify that all dependencies are installed
-
-**2. Memory issues with large codebases**
-- Adjust cache limits in the configuration
-- Use disk-based caching for large projects
-- Enable memory monitoring
-
-**3. Slow analysis performance**
-- Enable caching (default)
-- Reduce analysis depth for large files
-- Use incremental analysis mode
-
-**4. MCP connection issues**
-- Check that the server path is correct in MCP config
-- Ensure the executable has proper permissions
-- Verify Node.js version compatibility
-
-### Debug Mode
-```bash
-# Enable verbose logging
-DEBUG=mcp-typescript-analyzer node dist/index.js
-
-# Test server directly
-echo '{"jsonrpc":"2.0","method":"initialize","params":{},"id":1}' | node dist/index.js
-```
-
-## Contributing
-
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-### Development Setup
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass
-6. Submit a pull request
+The server includes comprehensive test coverage. See `TEST_RESULTS.md` for detailed test results and examples of all tool outputs.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see LICENSE file for details.
 
-## Acknowledgments
+## Contributing
 
-- [ts-morph](https://github.com/dsherret/ts-morph) - TypeScript compiler API wrapper
-- [Model Context Protocol](https://github.com/anthropics/mcp) - Protocol specification
-- [TypeScript](https://www.typescriptlang.org/) - The TypeScript language
+1. Fork the repository
+2. Create a feature branch
+3. Add tests for new functionality
+4. Ensure all tests pass
+5. Submit a pull request
 
-## Support
+## Requirements
 
-- **Issues**: [GitHub Issues](https://github.com/your-org/mcp-typescript-analyzer/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-org/mcp-typescript-analyzer/discussions)
-- **Documentation**: [Wiki](https://github.com/your-org/mcp-typescript-analyzer/wiki)
-
----
-
-**Made with care for the TypeScript community**
+- Node.js 18+
+- TypeScript 5.0+
+- A TypeScript project with valid `tsconfig.json`
