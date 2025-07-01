@@ -99,21 +99,6 @@ export const analyzeDependenciesSchema = z.object({
   groupBy: z.enum(["module", "file", "none"]).optional().default("module")
 });
 
-export const getCallGraphSchema = z.object({
-  functionName: z.string().optional(),
-  filePath: z.string().optional(),
-  direction: z.enum(["callers", "callees", "both"]),
-  maxDepth: z.number().optional().default(3),
-  includeAsync: z.boolean().optional().default(true)
-});
-
-export const analyzeTypeHierarchySchema = z.object({
-  typeName: z.string(),
-  direction: z.enum(["ancestors", "descendants", "both"]),
-  includeInterfaces: z.boolean().optional().default(true),
-  maxDepth: z.number().optional().default(5),
-  includeMembers: z.boolean().optional().default(false)
-});
 
 export const findPatternsSchema = z.object({
   pattern: z.string(),
