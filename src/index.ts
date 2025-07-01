@@ -20,7 +20,9 @@ import {
   extractContext,
   extractContextSchema,
   summarizeCodebase,
-  summarizeCodebaseSchema
+  summarizeCodebaseSchema,
+  getCompilationErrors,
+  getCompilationErrorsSchema
 } from "./tools.js";
 
 // Create the MCP server
@@ -181,58 +183,6 @@ server.tool(
   }
 );
 
-// Add more complex tools implementations
-server.tool(
-  "get_call_graph",
-  "Generate function call relationships",
-  {
-    functionName: searchSymbolsSchema.shape.query.optional(),
-    filePath: analyzeFileSchema.shape.filePath.optional(),
-    direction: analyzeDependenciesSchema.shape.direction,
-    maxDepth: searchSymbolsSchema.shape.maxResults.optional().default(3),
-    includeAsync: searchSymbolsSchema.shape.includeReferences.optional().default(true)
-  },
-  async (params) => {
-    // This would require more complex implementation
-    return {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify({
-            message: "Call graph analysis coming soon",
-            params
-          }, null, 2)
-        }
-      ]
-    };
-  }
-);
-
-server.tool(
-  "analyze_type_hierarchy", 
-  "Analyze inheritance and implementation relationships",
-  {
-    typeName: searchSymbolsSchema.shape.query,
-    direction: analyzeDependenciesSchema.shape.direction,
-    includeInterfaces: searchSymbolsSchema.shape.includeReferences.optional().default(true),
-    maxDepth: searchSymbolsSchema.shape.maxResults.optional().default(5),
-    includeMembers: searchSymbolsSchema.shape.includeReferences.optional().default(false)
-  },
-  async (params) => {
-    // This would require more complex implementation
-    return {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify({
-            message: "Type hierarchy analysis coming soon",
-            params
-          }, null, 2)
-        }
-      ]
-    };
-  }
-);
 
 server.tool(
   "find_patterns",
@@ -332,6 +282,36 @@ server.tool(
     try {
       const validated = summarizeCodebaseSchema.parse(params);
       const result = await summarizeCodebase(validated);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result, null, 2)
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`
+          }
+        ],
+        isError: true
+      };
+    }
+  }
+);
+
+server.tool(
+  "get_compilation_errors",
+  "Get TypeScript compilation errors for a file or directory",
+  getCompilationErrorsSchema._def.shape(),
+  async (params) => {
+    try {
+      const validated = getCompilationErrorsSchema.parse(params);
+      const result = await getCompilationErrors(validated);
       return {
         content: [
           {
