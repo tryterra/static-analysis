@@ -20,7 +20,9 @@ import {
   extractContext,
   extractContextSchema,
   summarizeCodebase,
-  summarizeCodebaseSchema
+  summarizeCodebaseSchema,
+  getCompilationErrors,
+  getCompilationErrorsSchema
 } from "./tools.js";
 
 // Create the MCP server
@@ -332,6 +334,36 @@ server.tool(
     try {
       const validated = summarizeCodebaseSchema.parse(params);
       const result = await summarizeCodebase(validated);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result, null, 2)
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`
+          }
+        ],
+        isError: true
+      };
+    }
+  }
+);
+
+server.tool(
+  "get_compilation_errors",
+  "Get TypeScript compilation errors for a file or directory",
+  getCompilationErrorsSchema._def.shape(),
+  async (params) => {
+    try {
+      const validated = getCompilationErrorsSchema.parse(params);
+      const result = await getCompilationErrors(validated);
       return {
         content: [
           {
